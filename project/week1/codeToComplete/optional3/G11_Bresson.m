@@ -1,0 +1,82 @@
+function [ v ] = G11_Bresson( I, p_0, dom2Inp, tol, dt, iterMax, lambda)
+%I          : Color image to impaint
+%u          : minimizing solution within inpainting area
+%v          : inpainted image
+%p_0        : Initial p
+%tol        : tolerance for the sopping criterium
+%dt         : time step
+%iterMax    : MAximum number of iterations
+
+hi=1;
+hj=1;
+
+u = zeros(size(I));
+p = p_0;
+v = I;
+dif = inf;
+nIter = 0;
+
+while dif>tol && nIter<iterMax
+    
+    u_old = u;
+    p_old = p;
+    nIter=nIter+1;
+    nIter
+                  
+        %gradient estimation
+        %i direction, forward finite differences
+        px_Bwd  = DiBwd(p.x,hi); 
+    
+        %j direction, forward finitie differences
+        py_Bwd  = DjBwd(p.y,hj); 
+
+        %p divergence operator
+        div_p = px_Bwd + py_Bwd;
+
+        %divergence of p minus v/lambda
+        block = div_p - v./lambda;
+
+        %derivatives estimation for block
+        %i direction, forward finite differences
+        block_iFwd  = DiFwd(block,hi); 
+
+        %j direction, forward finitie differences
+        block_jFwd  = DjFwd(block,hj); 
+
+        %gradient
+        grad_block.x = block_iFwd;
+        grad_block.y = block_jFwd;
+
+        %Discrete Square Norm
+        dsn =(sum((grad_block.x .^2) + (grad_block.y .^2),3)).^(1/2);
+        
+    for C=1:size(I,3)
+        %p calculus
+        p.x(:,:,C) = (p_old.x(:,:,C) + dt .* grad_block.x(:,:,C)) ./ ((dt .* dsn) + 1);
+        p.y(:,:,C) = (p_old.y(:,:,C) + dt .* grad_block.y(:,:,C)) ./ ((dt .* dsn) + 1);
+    end    
+        %gradient estimation
+        %i direction, forward finite differences
+        px_Bwd  = DiBwd(p.x,hi); 
+    
+        %j direction, forward finitie differences
+        py_Bwd  = DjBwd(p.y,hj); 
+
+        %p divergence operator
+        div_p = px_Bwd + py_Bwd;
+        
+        u = v - lambda .* div_p;
+    
+    for C=1:size(v,3)
+        v(:,:,C) = v(:,:,C).*(1-dom2Inp(:,:,C)) + (u(:,:,C) .* dom2Inp(:,:,C));
+    end
+         
+    %Diference for stopping criteria. 
+    dif = max(max(max(abs(u-u_old))))
+    
+     
+    figure(2)
+    imshow(u)
+    title('u');
+    pause(.0001); 
+end
